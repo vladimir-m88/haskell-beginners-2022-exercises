@@ -41,7 +41,7 @@ module Lecture2
     ) where
 
 -- VVV If you need to import libraries, do it after this line ... VVV
-
+import Data.Char (isSpace)
 -- ^^^ and before this line. Otherwise the test suite might fail  ^^^
 
 {- | Implement a function that finds a product of all the numbers in
@@ -52,7 +52,9 @@ zero, you can stop calculating product and return 0 immediately.
 84
 -}
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct [] = 1
+lazyProduct (0:_) = 0
+lazyProduct (x:xs) = x * lazyProduct xs
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -62,7 +64,8 @@ lazyProduct = error "TODO"
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate [] = []
+duplicate (x:xs) = x : x : duplicate xs
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -74,7 +77,15 @@ return the removed element.
 >>> removeAt 10 [1 .. 5]
 (Nothing,[1,2,3,4,5])
 -}
-removeAt = error "TODO"
+removeAt :: Int -> [a] -> (Maybe a, [a])
+removeAt index list
+  | index < 0 = (Nothing, list)
+  | otherwise = go 0 list []
+  where
+    go _ [] before = (Nothing, reverse before)
+    go i (x:xs) before
+      | i == index = (Just x, reverse before ++ xs)
+      | otherwise = go (i + 1) xs (x : before)
 
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
@@ -85,7 +96,8 @@ lists of even lengths.
 ♫ NOTE: Use eta-reduction and function composition (the dot (.) operator)
   in this function.
 -}
-evenLists = error "TODO"
+evenLists :: [[a]] -> [[a]]
+evenLists = filter (even . length)
 
 {- | The @dropSpaces@ function takes a string containing a single word
 or number surrounded by spaces and removes all leading and trailing
@@ -101,7 +113,8 @@ spaces.
 
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
-dropSpaces = error "TODO"
+dropSpaces :: String -> String
+dropSpaces = filter (not . isSpace)
 
 {- |
 
@@ -159,13 +172,102 @@ You're free to define any helper functions.
 
 -- some help in the beginning ;)
 data Knight = Knight
-    { knightHealth    :: Int
-    , knightAttack    :: Int
-    , knightEndurance :: Int
+  { knightHealth :: Int,
+    knightAttack :: Int,
+    knightEndurance :: Int
+  }
+
+data DragonType = Red | Black | Green
+
+data Dragon treasure = Dragon
+  { dragonType :: DragonType,
+    dragonHealth :: Int,
+    dragonFirePower :: Int,
+    dragonChest :: Chest treasure
+  }
+
+data Chest treasure = Chest
+  { chestGold :: Int,
+    chestTreasure :: treasure
+  }
+
+data Reward treasure = Reward
+  { rewardGold :: Int,
+    rewardTreasure :: Maybe treasure,
+    rewardExperience :: Int
+  }
+  deriving (Show)
+
+data FightOutcome treasure
+  = KnightWon (Reward treasure)
+  | KnightRanAway
+  | DragonWon
+  deriving (Show)
+
+experience :: Dragon treasure -> Int
+experience dragon = case dragonType dragon of
+  Red -> 100
+  Black -> 150
+  Green -> 250
+
+reward :: Dragon treasure -> Reward treasure
+reward dragon =
+  Reward
+    { rewardGold = chestGold (dragonChest dragon),
+      rewardTreasure = case dragonType dragon of
+        Green -> Nothing
+        _ -> Just (chestTreasure (dragonChest dragon)),
+      rewardExperience = experience dragon
     }
 
-dragonFight = error "TODO"
+attackDragon :: Knight -> Dragon treasure -> (Dragon treasure, Knight)
+attackDragon knight dragon =
+  ( dragon {dragonHealth = dragonHealth dragon - knightAttack knight},
+    knight {knightEndurance = knightEndurance knight - 1}
+  )
 
+attackKnight :: Dragon treasure -> Knight -> Knight
+attackKnight dragon knight =
+  knight {knightHealth = knightHealth knight - dragonFirePower dragon}
+
+dragonFight :: Knight -> Dragon treasure -> FightOutcome treasure
+dragonFight = go 1
+  where
+    go :: Int -> Knight -> Dragon treasure -> FightOutcome treasure
+    go strike knight dragon
+      | dragonHealth dragon <= 0 = KnightWon (reward dragon)
+      | knightHealth knight <= 0 = DragonWon
+      | knightEndurance knight <= 0 = KnightRanAway
+      | otherwise = go (strike + 1) knight'' dragon'
+      where
+        (dragon', knight') = attackDragon knight dragon
+        knight''
+          | strike `rem` 10 == 0 = attackKnight dragon' knight'
+          | otherwise = knight'
+
+knight1 :: Knight
+knight1 =
+  Knight
+    { knightHealth = 100,
+      knightAttack = 10,
+      knightEndurance = 20
+    }
+
+dragon1 :: Dragon String
+dragon1 =
+  Dragon
+    { dragonType = Red,
+      dragonHealth = 100,
+      dragonFirePower = 20,
+      dragonChest =
+        Chest
+          { chestGold = 1000,
+            chestTreasure = "Mega Sword" :: String
+          }
+    }
+
+fightOutcome1 :: FightOutcome String
+fightOutcome1 = dragonFight knight1 dragon1
 ----------------------------------------------------------------------------
 -- Extra Challenges
 ----------------------------------------------------------------------------
