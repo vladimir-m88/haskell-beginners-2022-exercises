@@ -136,6 +136,7 @@ lowerAndGreater n list =
     ++ show lw
     ++ " elements"
   where
+    gt, lw :: Int
     (gt, lw) = go list 0 0
 
     go l greater lower
