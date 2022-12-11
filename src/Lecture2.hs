@@ -26,6 +26,11 @@ module Lecture2
     , dropSpaces
 
     , Knight (..)
+    , DragonType (..)
+    , Dragon (..)
+    , Chest (..)
+    , Reward (..)
+    , FightOutcome (..)
     , dragonFight
 
       -- * Hard
@@ -196,13 +201,13 @@ data Reward treasure = Reward
     rewardTreasure :: Maybe treasure,
     rewardExperience :: Int
   }
-  deriving (Show)
+  deriving (Eq, Show)
 
 data FightOutcome treasure
   = KnightWon (Reward treasure)
   | KnightRanAway
   | DragonWon
-  deriving (Show)
+  deriving (Eq, Show)
 
 experience :: Dragon treasure -> Int
 experience dragon = case dragonType dragon of
@@ -245,29 +250,6 @@ dragonFight = go 1
           | strike `rem` 10 == 0 = attackKnight dragon' knight'
           | otherwise = knight'
 
-knight1 :: Knight
-knight1 =
-  Knight
-    { knightHealth = 100,
-      knightAttack = 10,
-      knightEndurance = 20
-    }
-
-dragon1 :: Dragon String
-dragon1 =
-  Dragon
-    { dragonType = Red,
-      dragonHealth = 100,
-      dragonFirePower = 20,
-      dragonChest =
-        Chest
-          { chestGold = 1000,
-            chestTreasure = "Mega Sword" :: String
-          }
-    }
-
-fightOutcome1 :: FightOutcome String
-fightOutcome1 = dragonFight knight1 dragon1
 ----------------------------------------------------------------------------
 -- Extra Challenges
 ----------------------------------------------------------------------------

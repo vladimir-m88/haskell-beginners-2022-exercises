@@ -11,7 +11,8 @@ import Test.Hspec (Expectation, Spec, describe, it, shouldBe, shouldSatisfy)
 import Test.Hspec.Hedgehog (assert, forAll, hedgehog, (===))
 
 import Lecture2 (EvalError (..), Expr (..), constantFolding, dropSpaces, duplicate, eval, evenLists,
-                 isIncreasing, lazyProduct, merge, mergeSort, removeAt)
+                 isIncreasing, lazyProduct, merge, mergeSort, removeAt,
+                 Knight (..), DragonType (..), Dragon (..), Chest (..), Reward (..), dragonFight, FightOutcome (..))
 
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -81,6 +82,69 @@ lecture2Normal = describe "Normal" $ do
         it "Both sides"     $ dropSpaces "   hi   " `shouldBe` "hi"
         it "Single space"   $ dropSpaces " 500 "    `shouldBe` "500"
         it "Infinite space" $ dropSpaces (" infinity" ++ repeat ' ') `shouldBe` "infinity"
+
+    describe "dragonFight" $ do
+        let knight1 = Knight { 
+            knightHealth = 100,
+            knightAttack = 10,
+            knightEndurance = 20 }
+        let dragon1 = Dragon { 
+            dragonType = Red,
+            dragonHealth = 200,
+            dragonFirePower = 20,
+            dragonChest = Chest { 
+                chestGold = 300, 
+                chestTreasure = "Mega Sword" :: String }}
+        it "The knight defeated the red dragon" $ dragonFight knight1 dragon1 `shouldBe` 
+            KnightWon (Reward {
+                rewardGold = 300, 
+                rewardTreasure = Just "Mega Sword", 
+                rewardExperience = 100})
+
+        let knight2 = Knight { 
+            knightHealth = 100,
+            knightAttack = 10,
+            knightEndurance = 30 }
+        let dragon2 = Dragon { 
+            dragonType = Green,
+            dragonHealth = 300,
+            dragonFirePower = 30,
+            dragonChest = Chest { 
+                chestGold = 400, 
+                chestTreasure = "Mega Sword" :: String }}
+        it "The knight defeated the green dragon" $ dragonFight knight2 dragon2 `shouldBe` 
+            KnightWon (Reward {
+                rewardGold = 400, 
+                rewardTreasure = Nothing, 
+                rewardExperience = 250})
+
+        let knight3 = Knight { 
+            knightHealth = 100,
+            knightAttack = 10,
+            knightEndurance = 20 }
+        let dragon3 = Dragon { 
+            dragonType = Black,
+            dragonHealth = 500,
+            dragonFirePower = 20,
+            dragonChest = Chest { 
+                chestGold = 300, 
+                chestTreasure = "Mega Sword" :: String }}
+        it "The knight ran away" $ dragonFight knight3 dragon3 `shouldBe` 
+            KnightRanAway
+
+        let knight4 = Knight { 
+            knightHealth = 100,
+            knightAttack = 10,
+            knightEndurance = 30 }
+        let dragon4 = Dragon { 
+            dragonType = Green,
+            dragonHealth = 300,
+            dragonFirePower = 50,
+            dragonChest = Chest { 
+                chestGold = 400, 
+                chestTreasure = "Mega Sword" :: String }}
+        it "The dragon defeated the knight" $ dragonFight knight4 dragon4 `shouldBe` 
+            DragonWon
 
 lecture2Hard :: Spec
 lecture2Hard = describe "Hard" $ do
