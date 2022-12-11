@@ -304,7 +304,11 @@ False
 True
 -}
 isIncreasing :: [Int] -> Bool
-isIncreasing = error "TODO"
+isIncreasing [] = True
+isIncreasing [_] = True
+isIncreasing (x1 : x2 : xs)
+  | x1 > x2 = False
+  | otherwise = isIncreasing (x2 : xs)
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -317,7 +321,11 @@ verify that.
 [1,2,3,4,7]
 -}
 merge :: [Int] -> [Int] -> [Int]
-merge = error "TODO"
+merge [] l2 = l2
+merge l1 [] = l1
+merge l1@(x : xs) l2@(y : ys)
+  | x < y = x : merge xs l2
+  | otherwise = y : merge l1 ys
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
@@ -334,8 +342,18 @@ The algorithm of merge sort is the following:
 [1,2,3]
 -}
 mergeSort :: [Int] -> [Int]
-mergeSort = error "TODO"
+mergeSort [] = []
+mergeSort [x] = [x]
+mergeSort l = merge (mergeSort l1) (mergeSort l2)
+  where
+    (l1, l2) = splitListInHalf l
 
+    splitListInHalf :: [a] -> ([a], [a])
+    splitListInHalf [] = ([], [])
+    splitListInHalf [x] = ([x], [])
+    splitListInHalf (x1 : x2 : xs) = (x1 : tail1, x2 : tail2)
+      where
+        (tail1, tail2) = splitListInHalf xs
 
 {- | Haskell is famous for being a superb language for implementing
 compilers and interpreters to other programming languages. In the next
