@@ -25,6 +25,11 @@ module Lecture2
     , evenLists
     , dropSpaces
 
+    , Health (..)
+    , Attack (..)
+    , Endurance (..)
+    , Experience (..)
+    , AmountOfGold (..)
     , Knight (..)
     , DragonType (..)
     , Dragon (..)
@@ -176,30 +181,40 @@ You're free to define any helper functions.
 -}
 
 -- some help in the beginning ;)
+newtype Health = Health Int deriving (Eq, Show)
+
+newtype Attack = Attack Int deriving (Eq, Show)
+
+newtype Endurance = Endurance Int deriving (Eq, Show)
+
+newtype AmountOfGold = AmountOfGold Int deriving (Eq, Show)
+
+newtype Experience = Experience Int deriving (Eq, Show)
+
 data Knight = Knight
-  { knightHealth :: Int,
-    knightAttack :: Int,
-    knightEndurance :: Int
+  { knightHealth :: Health,
+    knightAttack :: Attack,
+    knightEndurance :: Endurance
   }
 
 data DragonType = Red | Black | Green
 
 data Dragon treasure = Dragon
   { dragonType :: DragonType,
-    dragonHealth :: Int,
-    dragonFirePower :: Int,
+    dragonHealth :: Health,
+    dragonFirePower :: Attack,
     dragonChest :: Chest treasure
   }
 
 data Chest treasure = Chest
-  { chestGold :: Int,
+  { chestGold :: AmountOfGold,
     chestTreasure :: treasure
   }
 
 data Reward treasure = Reward
-  { rewardGold :: Int,
+  { rewardGold :: AmountOfGold,
     rewardTreasure :: Maybe treasure,
-    rewardExperience :: Int
+    rewardExperience :: Experience
   }
   deriving (Eq, Show)
 
@@ -209,11 +224,11 @@ data FightOutcome treasure
   | DragonWon
   deriving (Eq, Show)
 
-experience :: Dragon treasure -> Int
+experience :: Dragon treasure -> Experience
 experience dragon = case dragonType dragon of
-  Red -> 100
-  Black -> 150
-  Green -> 250
+  Red -> Experience 100
+  Black -> Experience 150
+  Green -> Experience 250
 
 reward :: Dragon treasure -> Reward treasure
 reward dragon =
@@ -225,24 +240,39 @@ reward dragon =
       rewardExperience = experience dragon
     }
 
+calcHealth :: Health -> Attack -> Health
+calcHealth (Health h) (Attack a) = Health (h - a)
+
+decrEndurance :: Endurance -> Endurance
+decrEndurance (Endurance e) = Endurance (e - 1)
+
 attackDragon :: Knight -> Dragon treasure -> (Dragon treasure, Knight)
 attackDragon knight dragon =
-  ( dragon {dragonHealth = dragonHealth dragon - knightAttack knight},
-    knight {knightEndurance = knightEndurance knight - 1}
+  ( dragon {dragonHealth = calcHealth (dragonHealth dragon) (knightAttack knight)},
+    knight {knightEndurance = decrEndurance $ knightEndurance knight}
   )
 
 attackKnight :: Dragon treasure -> Knight -> Knight
 attackKnight dragon knight =
-  knight {knightHealth = knightHealth knight - dragonFirePower dragon}
+  knight {knightHealth = calcHealth (knightHealth knight) (dragonFirePower dragon)}
+
+isKnightDead :: Knight -> Bool
+isKnightDead Knight {knightHealth = (Health h)} = h <= 0
+
+isKnightTired :: Knight -> Bool
+isKnightTired Knight {knightEndurance = (Endurance e)} = e <= 0
+
+isDragonDead :: Dragon treasure -> Bool
+isDragonDead Dragon {dragonHealth = (Health h)} = h <= 0
 
 dragonFight :: Knight -> Dragon treasure -> FightOutcome treasure
 dragonFight = go 1
   where
     go :: Int -> Knight -> Dragon treasure -> FightOutcome treasure
     go strike knight dragon
-      | dragonHealth dragon <= 0 = KnightWon (reward dragon)
-      | knightHealth knight <= 0 = DragonWon
-      | knightEndurance knight <= 0 = KnightRanAway
+      | isDragonDead dragon = KnightWon (reward dragon)
+      | isKnightDead knight = DragonWon
+      | isKnightTired knight = KnightRanAway
       | otherwise = go (strike + 1) knight'' dragon'
       where
         (dragon', knight') = attackDragon knight dragon

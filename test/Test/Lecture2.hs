@@ -11,7 +11,8 @@ import Test.Hspec (Expectation, Spec, describe, it, shouldBe, shouldSatisfy)
 import Test.Hspec.Hedgehog (assert, forAll, hedgehog, (===))
 
 import Lecture2 (EvalError (..), Expr (..), constantFolding, dropSpaces, duplicate, eval, evenLists,
-                 isIncreasing, lazyProduct, merge, mergeSort, removeAt,
+                 isIncreasing, lazyProduct, merge, mergeSort, removeAt, 
+                 Health (..), Attack (..), Endurance (..), Experience (..), AmountOfGold (..),
                  Knight (..), DragonType (..), Dragon (..), Chest (..), Reward (..), dragonFight, FightOutcome (..))
 
 import qualified Hedgehog.Gen as Gen
@@ -85,63 +86,63 @@ lecture2Normal = describe "Normal" $ do
 
     describe "dragonFight" $ do
         let knight1 = Knight { 
-            knightHealth = 100,
-            knightAttack = 10,
-            knightEndurance = 20 }
+            knightHealth = Health 100,
+            knightAttack = Attack 10,
+            knightEndurance = Endurance 20 }
         let dragon1 = Dragon { 
             dragonType = Red,
-            dragonHealth = 200,
-            dragonFirePower = 20,
+            dragonHealth = Health 200,
+            dragonFirePower = Attack 20,
             dragonChest = Chest { 
-                chestGold = 300, 
+                chestGold = AmountOfGold 300, 
                 chestTreasure = "Mega Sword" :: String }}
         it "The knight defeated the red dragon" $ dragonFight knight1 dragon1 `shouldBe` 
             KnightWon (Reward {
-                rewardGold = 300, 
+                rewardGold = AmountOfGold 300, 
                 rewardTreasure = Just "Mega Sword", 
-                rewardExperience = 100})
+                rewardExperience = Experience 100})
 
         let knight2 = Knight { 
-            knightHealth = 100,
-            knightAttack = 10,
-            knightEndurance = 30 }
+            knightHealth = Health 100,
+            knightAttack = Attack 10,
+            knightEndurance = Endurance 30 }
         let dragon2 = Dragon { 
             dragonType = Green,
-            dragonHealth = 300,
-            dragonFirePower = 30,
+            dragonHealth = Health 300,
+            dragonFirePower = Attack 30,
             dragonChest = Chest { 
-                chestGold = 400, 
+                chestGold = AmountOfGold 400, 
                 chestTreasure = "Mega Sword" :: String }}
         it "The knight defeated the green dragon" $ dragonFight knight2 dragon2 `shouldBe` 
             KnightWon (Reward {
-                rewardGold = 400, 
+                rewardGold = AmountOfGold 400, 
                 rewardTreasure = Nothing, 
-                rewardExperience = 250})
+                rewardExperience = Experience  250})
 
         let knight3 = Knight { 
-            knightHealth = 100,
-            knightAttack = 10,
-            knightEndurance = 20 }
+            knightHealth = Health 100,
+            knightAttack = Attack 10,
+            knightEndurance = Endurance 20 }
         let dragon3 = Dragon { 
             dragonType = Black,
-            dragonHealth = 500,
-            dragonFirePower = 20,
+            dragonHealth = Health 500,
+            dragonFirePower = Attack 20,
             dragonChest = Chest { 
-                chestGold = 300, 
+                chestGold = AmountOfGold 300, 
                 chestTreasure = "Mega Sword" :: String }}
         it "The knight ran away" $ dragonFight knight3 dragon3 `shouldBe` 
             KnightRanAway
 
         let knight4 = Knight { 
-            knightHealth = 100,
-            knightAttack = 10,
-            knightEndurance = 30 }
+            knightHealth = Health 100,
+            knightAttack = Attack 10,
+            knightEndurance = Endurance 30 }
         let dragon4 = Dragon { 
             dragonType = Green,
-            dragonHealth = 300,
-            dragonFirePower = 50,
+            dragonHealth = Health 300,
+            dragonFirePower = Attack 50,
             dragonChest = Chest { 
-                chestGold = 400, 
+                chestGold = AmountOfGold 400, 
                 chestTreasure = "Mega Sword" :: String }}
         it "The dragon defeated the knight" $ dragonFight knight4 dragon4 `shouldBe` 
             DragonWon
