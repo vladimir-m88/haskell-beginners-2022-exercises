@@ -405,7 +405,15 @@ data EvalError
 It returns either a successful evaluation result or an error.
 -}
 eval :: Variables -> Expr -> Either EvalError Int
-eval = error "TODO"
+eval _ (Lit x) = Right x
+eval vars (Var name) = case lookup name vars of
+  Just x -> Right x
+  Nothing -> Left $ VariableNotFound name
+eval vars (Add e1 e2) = case eval vars e1 of
+  err@(Left _) -> err
+  Right x -> case eval vars e2 of
+    err@(Left _) -> err
+    Right y -> Right $ x + y
 
 {- | Compilers also perform optimizations! One of the most common
 optimizations is "Constant Folding". It performs arithmetic operations
@@ -429,4 +437,52 @@ Write a function that takes and expression and performs "Constant
 Folding" optimization on the given expression.
 -}
 constantFolding :: Expr -> Expr
-constantFolding = error "TODO"
+constantFolding = listToExpr . exprToList
+  where
+    exprToList :: Expr -> [Expr]
+    exprToList expr = case expr of
+      l@(Lit _) -> [l]
+      v@(Var _) -> [v]
+      (Add e1 e2) -> exprToList e1 ++ exprToList e2
+
+    listToExpr2 :: [Expr] -> Expr
+    listToExpr2 = error "not implemented"
+      where
+        go :: Expr -> Int -> [Expr] -> Expr
+        go varExpr acc [] = case (varExpr, acc) of
+          (Lit 0, 0) -> Lit 0
+          (Lit 0, x) -> Lit x
+          (v, 0) -> v
+          (v, x) -> Add v (Lit x)
+        go varExpr acc (e : es) = case e of
+          Lit x -> go varExpr (acc + x) es
+          v@(Var _) -> go (Add varExpr v) acc es
+          _ -> error "Invalid expression"
+
+    listToExpr :: [Expr] -> Expr
+    listToExpr exprs = case (vars, lits) of
+      ([], []) -> Lit 0
+      ([], ls) -> sumLits ls
+      (vs, []) -> sumVars vs
+      (vs, ls) -> case (sumLits ls) of
+        Lit 0 -> sumVars vs
+        Lit x -> Add (sumVars vs) (Lit x)
+      where
+        isVar expr = case expr of
+          Var _ -> True
+          _ -> False
+
+        isLit expr = case expr of
+          Lit _ -> True
+          _ -> False
+
+        vars = filter isVar exprs
+        lits = filter isLit exprs
+
+        sumLits :: [Expr] -> Expr
+        sumLits ls = Lit (sum $map (\(Lit x) -> x) ls)
+
+        sumVars :: [Expr] -> Expr
+        sumVars vs = case vs of
+          [x] -> x
+          (x : xs) -> Add x (sumVars xs)
