@@ -437,52 +437,25 @@ Write a function that takes and expression and performs "Constant
 Folding" optimization on the given expression.
 -}
 constantFolding :: Expr -> Expr
-constantFolding = listToExpr . exprToList
+constantFolding = toExpr . sumConst . toTerms
   where
-    exprToList :: Expr -> [Expr]
-    exprToList expr = case expr of
+    toTerms :: Expr -> [Expr]
+    toTerms expr = case expr of
       l@(Lit _) -> [l]
       v@(Var _) -> [v]
-      (Add e1 e2) -> exprToList e1 ++ exprToList e2
+      Add e1 e2 -> toTerms e1 ++ toTerms e2
 
-    listToExpr2 :: [Expr] -> Expr
-    listToExpr2 = error "not implemented"
+    sumConst :: [Expr] -> (Int, [Expr])
+    sumConst = go 0 []
       where
-        go :: Expr -> Int -> [Expr] -> Expr
-        go varExpr acc [] = case (varExpr, acc) of
-          (Lit 0, 0) -> Lit 0
-          (Lit 0, x) -> Lit x
-          (v, 0) -> v
-          (v, x) -> Add v (Lit x)
-        go varExpr acc (e : es) = case e of
-          Lit x -> go varExpr (acc + x) es
-          v@(Var _) -> go (Add varExpr v) acc es
-          _ -> error "Invalid expression"
+        go val exprs [] = (val, exprs)
+        go val exprs (x : xs) = case x of
+          (Lit l) -> go (val + l) exprs xs
+          e -> go val (e : exprs) xs
 
-    listToExpr :: [Expr] -> Expr
-    listToExpr exprs = case (vars, lits) of
-      ([], []) -> Lit 0
-      ([], ls) -> sumLits ls
-      (vs, []) -> sumVars vs
-      (vs, ls) -> case (sumLits ls) of
-        Lit 0 -> sumVars vs
-        Lit x -> Add (sumVars vs) (Lit x)
-      where
-        isVar expr = case expr of
-          Var _ -> True
-          _ -> False
-
-        isLit expr = case expr of
-          Lit _ -> True
-          _ -> False
-
-        vars = filter isVar exprs
-        lits = filter isLit exprs
-
-        sumLits :: [Expr] -> Expr
-        sumLits ls = Lit (sum $map (\(Lit x) -> x) ls)
-
-        sumVars :: [Expr] -> Expr
-        sumVars vs = case vs of
-          [x] -> x
-          (x : xs) -> Add x (sumVars xs)
+    toExpr :: (Int, [Expr]) -> Expr
+    toExpr constAndExprs = case constAndExprs of
+      (0, []) -> Lit 0
+      (x, []) -> Lit x
+      (0, e : exprs) -> foldr Add e exprs
+      (x, e : exprs) -> Add (foldr Add e exprs) (Lit x)
