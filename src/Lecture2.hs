@@ -322,6 +322,7 @@ merge :: [Int] -> [Int] -> [Int]
 merge [] l2 = l2
 merge l1 [] = l1
 merge l1@(x : xs) l2@(y : ys)
+  | x == y = x : y : merge xs ys
   | x < y = x : merge xs l2
   | otherwise = y : merge l1 ys
 
@@ -437,23 +438,26 @@ Folding" optimization on the given expression.
 constantFolding :: Expr -> Expr
 constantFolding = toExpr . sumConst . toTerms
   where
-    toTerms :: Expr -> [Expr]
+    toTerms :: Expr -> [Either Int String]
     toTerms expr = case expr of
-      l@(Lit _) -> [l]
-      v@(Var _) -> [v]
+      (Lit x) -> [Left x]
+      (Var name) -> [Right name]
       Add e1 e2 -> toTerms e1 ++ toTerms e2
 
-    sumConst :: [Expr] -> (Int, [Expr])
+    sumConst :: [Either Int String] -> (Int, [String])
     sumConst = go 0 []
       where
-        go val exprs [] = (val, exprs)
-        go val exprs (x : xs) = case x of
-          (Lit l) -> go (val + l) exprs xs
-          e -> go val (e : exprs) xs
+        go val vars [] = (val, vars)
+        go val vars (x : xs) = case x of
+          Left i -> go (val + i) vars xs
+          Right name -> go val (name : vars) xs
 
-    toExpr :: (Int, [Expr]) -> Expr
-    toExpr constAndExprs = case constAndExprs of
+    toExpr :: (Int, [String]) -> Expr
+    toExpr constAndVars = case constAndVars of
       (0, []) -> Lit 0
       (x, []) -> Lit x
-      (0, e : exprs) -> foldr Add e exprs
-      (x, e : exprs) -> Add (foldr Add e exprs) (Lit x)
+      (0, v : vars) -> addVars v vars
+      (x, v : vars) -> Add (addVars v vars) (Lit x)
+
+    addVars :: String -> [String] -> Expr
+    addVars v vars = foldr (Add . Var) (Var v) vars
