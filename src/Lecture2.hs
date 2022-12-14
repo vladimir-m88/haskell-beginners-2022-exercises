@@ -90,13 +90,14 @@ return the removed element.
 removeAt :: Int -> [a] -> (Maybe a, [a])
 removeAt index list
   | index < 0 = (Nothing, list)
-  | otherwise = go 0 list []
+  | otherwise = go 0 list id
   where
-    go _ [] before = (Nothing, reverse before)
-    go i (x:xs) before
-      | i == index = (Just x, reverse before ++ xs)
-      | otherwise = go (i + 1) xs (x : before)
-
+    go :: Int -> [a] -> ([a] -> [a]) -> (Maybe a, [a])
+    go _ [] buildPrev = (Nothing, buildPrev [])
+    go i (x : xs) buildPrev
+      | i == index = (Just x, buildPrev xs)
+      | otherwise = go (i + 1) xs (buildPrev . (x :))
+      
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
 
