@@ -25,7 +25,17 @@ module Lecture2
     , evenLists
     , dropSpaces
 
+    , Health (..)
+    , Attack (..)
+    , Endurance (..)
+    , Experience (..)
+    , AmountOfGold (..)
+    , Treasure (..)
     , Knight (..)
+    , DragonType (..)
+    , Dragon (..)
+    , Reward (..)
+    , FightOutcome (..)
     , dragonFight
 
       -- * Hard
@@ -41,7 +51,7 @@ module Lecture2
     ) where
 
 -- VVV If you need to import libraries, do it after this line ... VVV
-
+import Data.Char (isSpace)
 -- ^^^ and before this line. Otherwise the test suite might fail  ^^^
 
 {- | Implement a function that finds a product of all the numbers in
@@ -52,7 +62,9 @@ zero, you can stop calculating product and return 0 immediately.
 84
 -}
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct [] = 1
+lazyProduct (0:_) = 0
+lazyProduct (x:xs) = x * lazyProduct xs
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -62,7 +74,8 @@ lazyProduct = error "TODO"
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate [] = []
+duplicate (x:xs) = x : x : duplicate xs
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -74,8 +87,17 @@ return the removed element.
 >>> removeAt 10 [1 .. 5]
 (Nothing,[1,2,3,4,5])
 -}
-removeAt = error "TODO"
-
+removeAt :: Int -> [a] -> (Maybe a, [a])
+removeAt index list
+  | index < 0 = (Nothing, list)
+  | otherwise = go 0 list id
+  where
+    go :: Int -> [a] -> ([a] -> [a]) -> (Maybe a, [a])
+    go _ [] buildPrev = (Nothing, buildPrev [])
+    go i (x : xs) buildPrev
+      | i == index = (Just x, buildPrev xs)
+      | otherwise = go (i + 1) xs (buildPrev . (x :))
+      
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
 
@@ -85,7 +107,8 @@ lists of even lengths.
 ♫ NOTE: Use eta-reduction and function composition (the dot (.) operator)
   in this function.
 -}
-evenLists = error "TODO"
+evenLists :: [[a]] -> [[a]]
+evenLists = filter (even . length)
 
 {- | The @dropSpaces@ function takes a string containing a single word
 or number surrounded by spaces and removes all leading and trailing
@@ -101,7 +124,8 @@ spaces.
 
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
-dropSpaces = error "TODO"
+dropSpaces :: String -> String
+dropSpaces = takeWhile (not . isSpace) . dropWhile isSpace
 
 {- |
 
@@ -157,14 +181,110 @@ You're free to define any helper functions.
        treasure besides gold (if you already haven't done this).
 -}
 
+newtype Health = Health Int
+
+newtype Attack = Attack Int
+
+newtype Endurance = Endurance Int
+
+newtype AmountOfGold = AmountOfGold Int deriving (Eq, Show)
+
+newtype Experience = Experience Int deriving (Eq, Show)
+
+newtype Treasure a = Treasure a deriving (Eq, Show)
+
 -- some help in the beginning ;)
 data Knight = Knight
-    { knightHealth    :: Int
-    , knightAttack    :: Int
-    , knightEndurance :: Int
+  { knightHealth :: Health,
+    knightAttack :: Attack,
+    knightEndurance :: Endurance
+  }
+
+data DragonType a
+  = RedDragon (Treasure a)
+  | BlackDragon (Treasure a)
+  | GreenDragon
+
+data Dragon a = Dragon
+  { dragonType :: DragonType a,
+    dragonHealth :: Health,
+    dragonFirePower :: Attack,
+    dragonGold :: AmountOfGold
+  }
+
+data Reward a = Reward
+  { rewardGold :: AmountOfGold,
+    rewardExperience :: Experience,
+    rewardTreasure :: Maybe (Treasure a)
+  }
+  deriving (Eq, Show)
+
+data FightOutcome a
+  = KnightWon (Reward a)
+  | KnightRanAway
+  | DragonWon
+  deriving (Eq, Show)
+
+experienceByDragon :: Dragon a -> Experience
+experienceByDragon dragon = case dragonType dragon of
+  RedDragon {} -> Experience 100
+  BlackDragon {} -> Experience 150
+  GreenDragon -> Experience 250
+
+dragonTreasure :: Dragon a -> Maybe (Treasure a)
+dragonTreasure dragon = case dragonType dragon of
+  RedDragon t -> Just t
+  BlackDragon t -> Just t
+  GreenDragon -> Nothing
+
+dragonReward :: Dragon a -> Reward a
+dragonReward dragon =
+  Reward
+    { rewardGold = dragonGold dragon,
+      rewardExperience = experienceByDragon dragon,
+      rewardTreasure = dragonTreasure dragon
     }
 
-dragonFight = error "TODO"
+calcHealth :: Health -> Attack -> Health
+calcHealth (Health h) (Attack a) = Health (h - a)
+
+decrKnightEndurance :: Knight -> Knight
+decrKnightEndurance k@Knight {knightEndurance = Endurance e} =
+  k {knightEndurance = Endurance (e - 1)}
+
+attackDragon :: Knight -> Dragon a -> (Dragon a, Knight)
+attackDragon knight dragon =
+  ( dragon {dragonHealth = calcHealth (dragonHealth dragon) (knightAttack knight)},
+    decrKnightEndurance knight
+  )
+
+attackKnight :: Dragon a -> Knight -> Knight
+attackKnight dragon knight =
+  knight {knightHealth = calcHealth (knightHealth knight) (dragonFirePower dragon)}
+
+isKnightDead :: Knight -> Bool
+isKnightDead Knight {knightHealth = (Health h)} = h <= 0
+
+isKnightTired :: Knight -> Bool
+isKnightTired Knight {knightEndurance = (Endurance e)} = e <= 0
+
+isDragonDead :: Dragon a -> Bool
+isDragonDead Dragon {dragonHealth = (Health h)} = h <= 0
+
+dragonFight :: Knight -> Dragon a -> FightOutcome a
+dragonFight = go 1
+  where
+    go :: Int -> Knight -> Dragon a -> FightOutcome a
+    go strike knight dragon
+      | isDragonDead dragon = KnightWon (dragonReward dragon)
+      | isKnightDead knight = DragonWon
+      | isKnightTired knight = KnightRanAway
+      | otherwise = go (strike + 1) knight'' dragon'
+      where
+        (dragon', knight') = attackDragon knight dragon
+        knight''
+          | strike `rem` 10 == 0 = attackKnight dragon' knight'
+          | otherwise = knight'
 
 ----------------------------------------------------------------------------
 -- Extra Challenges
@@ -185,7 +305,9 @@ False
 True
 -}
 isIncreasing :: [Int] -> Bool
-isIncreasing = error "TODO"
+isIncreasing [] = True
+isIncreasing [_] = True
+isIncreasing (x1 : x2 : xs) = x1 < x2 && isIncreasing (x2 : xs)
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -198,7 +320,12 @@ verify that.
 [1,2,3,4,7]
 -}
 merge :: [Int] -> [Int] -> [Int]
-merge = error "TODO"
+merge [] l2 = l2
+merge l1 [] = l1
+merge l1@(x : xs) l2@(y : ys)
+  | x == y = x : y : merge xs ys
+  | x < y = x : merge xs l2
+  | otherwise = y : merge l1 ys
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
@@ -215,8 +342,18 @@ The algorithm of merge sort is the following:
 [1,2,3]
 -}
 mergeSort :: [Int] -> [Int]
-mergeSort = error "TODO"
+mergeSort [] = []
+mergeSort [x] = [x]
+mergeSort l = merge (mergeSort l1) (mergeSort l2)
+  where
+    (l1, l2) = splitListInHalf l
 
+    splitListInHalf :: [a] -> ([a], [a])
+    splitListInHalf [] = ([], [])
+    splitListInHalf [x] = ([x], [])
+    splitListInHalf (x1 : x2 : xs) = (x1 : tail1, x2 : tail2)
+      where
+        (tail1, tail2) = splitListInHalf xs
 
 {- | Haskell is famous for being a superb language for implementing
 compilers and interpreters to other programming languages. In the next
@@ -268,7 +405,15 @@ data EvalError
 It returns either a successful evaluation result or an error.
 -}
 eval :: Variables -> Expr -> Either EvalError Int
-eval = error "TODO"
+eval _ (Lit x) = Right x
+eval vars (Var name) = case lookup name vars of
+  Just x -> Right x
+  Nothing -> Left $ VariableNotFound name
+eval vars (Add e1 e2) = case eval vars e1 of
+  err@(Left _) -> err
+  Right x -> case eval vars e2 of
+    err@(Left _) -> err
+    Right y -> Right $ x + y
 
 {- | Compilers also perform optimizations! One of the most common
 optimizations is "Constant Folding". It performs arithmetic operations
@@ -292,4 +437,28 @@ Write a function that takes and expression and performs "Constant
 Folding" optimization on the given expression.
 -}
 constantFolding :: Expr -> Expr
-constantFolding = error "TODO"
+constantFolding = toExpr . sumConst . toTerms
+  where
+    toTerms :: Expr -> [Either Int String]
+    toTerms expr = case expr of
+      (Lit x) -> [Left x]
+      (Var name) -> [Right name]
+      Add e1 e2 -> toTerms e1 ++ toTerms e2
+
+    sumConst :: [Either Int String] -> (Int, [String])
+    sumConst = go 0 []
+      where
+        go val vars [] = (val, vars)
+        go val vars (x : xs) = case x of
+          Left i -> go (val + i) vars xs
+          Right name -> go val (name : vars) xs
+
+    toExpr :: (Int, [String]) -> Expr
+    toExpr constAndVars = case constAndVars of
+      (0, []) -> Lit 0
+      (x, []) -> Lit x
+      (0, v : vars) -> addVars v vars
+      (x, v : vars) -> Add (addVars v vars) (Lit x)
+
+    addVars :: String -> [String] -> Expr
+    addVars v vars = foldr (Add . Var) (Var v) vars
