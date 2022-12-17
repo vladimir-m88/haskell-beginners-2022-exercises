@@ -36,7 +36,7 @@ module Lecture3
     ) where
 
 -- VVV If you need to import libraries, do it after this line ... VVV
-
+import Data.List (nub)
 -- ^^^ and before this line. Otherwise the test suite might fail  ^^^
 
 -- $setup
@@ -119,9 +119,12 @@ newtype Gold = Gold
 
 -- | Addition of gold coins.
 instance Semigroup Gold where
-
+  (<>) :: Gold -> Gold -> Gold
+  Gold x <> Gold y = Gold (x + y)
 
 instance Monoid Gold where
+  mempty :: Gold
+  mempty = Gold 0
 
 
 {- | A reward for completing a difficult quest says how much gold
@@ -136,9 +139,14 @@ data Reward = Reward
     } deriving (Show, Eq)
 
 instance Semigroup Reward where
-
+  (<>) :: Reward -> Reward -> Reward
+  Reward {rewardGold = g1, rewardSpecial = s1}
+    <> Reward {rewardGold = g2, rewardSpecial = s2} =
+      Reward {rewardGold = g1 <> g2, rewardSpecial = s1 || s2}
 
 instance Monoid Reward where
+  mempty :: Reward
+  mempty = Reward {rewardGold = mempty, rewardSpecial = False}
 
 
 {- | 'List1' is a list that contains at least one element.
@@ -148,11 +156,14 @@ data List1 a = List1 a [a]
 
 -- | This should be list append.
 instance Semigroup (List1 a) where
-
+  (<>) :: List1 a -> List1 a -> List1 a
+  List1 x xs <> List1 y ys = List1 x (xs ++ (y : ys))
 
 {- | Does 'List1' have the 'Monoid' instance? If no then why?
 
 instance Monoid (List1 a) where
+  The 'List1' has no the 'Monoid' instance because it always contains at least one element. 
+  After concatenating the list with the element, we get a different list.
 -}
 
 {- | When fighting a monster, you can either receive some treasure or
@@ -170,10 +181,16 @@ monsters, you should get a combined treasure and not just the first
 🕯 HINT: You may need to add additional constraints to this instance
   declaration.
 -}
-instance Semigroup (Treasure a) where
+instance Semigroup a => Semigroup (Treasure a) where
+  (<>) :: Treasure a -> Treasure a -> Treasure a
+  NoTreasure <> NoTreasure = NoTreasure
+  SomeTreasure x <> NoTreasure = SomeTreasure x
+  NoTreasure <> SomeTreasure y = SomeTreasure y
+  SomeTreasure x <> SomeTreasure y = SomeTreasure (x <> y)
 
-
-instance Monoid (Treasure a) where
+instance Semigroup a => Monoid (Treasure a) where
+  mempty :: Treasure a
+  mempty = NoTreasure
 
 
 {- | Abstractions are less helpful if we can't write functions that
@@ -192,7 +209,8 @@ together only different elements.
 Product {getProduct = 6}
 
 -}
-appendDiff3 = error "TODO"
+appendDiff3 :: (Monoid a, Eq a) => a -> a -> a -> a
+appendDiff3 x y z = mconcat $ nub [x, y, z]
 
 {-
 
@@ -224,8 +242,19 @@ types that can have such an instance.
 -- instance Foldable Weekday where
 -- instance Foldable Gold where
 -- instance Foldable Reward where
--- instance Foldable List1 where
--- instance Foldable Treasure where
+instance Foldable List1 where
+  foldr :: (a -> b -> b) -> b -> List1 a -> b
+  foldr f acc (List1 x xs) = foldr f acc (x : xs)
+  foldMap :: Monoid m => (a -> m) -> List1 a -> m
+  foldMap toMonoid (List1 x xs) = mconcat $ map toMonoid (x : xs)
+
+instance Foldable Treasure where
+  foldr :: (a -> b -> b) -> b -> Treasure a -> b
+  foldr _ acc NoTreasure = acc
+  foldr f acc (SomeTreasure x) = f x acc
+  foldMap :: Monoid m => (a -> m) -> Treasure a -> m
+  foldMap _ NoTreasure = mempty
+  foldMap toMonoid (SomeTreasure x) = toMonoid x
 
 {-
 
@@ -240,8 +269,14 @@ types that can have such an instance.
 -- instance Functor Weekday where
 -- instance Functor Gold where
 -- instance Functor Reward where
--- instance Functor List1 where
--- instance Functor Treasure where
+instance Functor List1 where
+  fmap :: (a -> b) -> List1 a -> List1 b
+  fmap f (List1 x xs) = List1 (f x) (map f xs)
+
+instance Functor Treasure where
+  fmap :: (a -> b) -> Treasure a -> Treasure b
+  fmap _ NoTreasure = NoTreasure
+  fmap f (SomeTreasure x) = SomeTreasure (f x)
 
 {- | Functions are first-class values in Haskell. This means that they
 can be even stored inside other data types as well!
@@ -260,4 +295,5 @@ Just [8,9,10]
 [8,20,3]
 
 -}
-apply = error "TODO"
+apply :: Functor f => a -> f (a -> b) -> f b
+apply el = fmap (\f -> f el)
