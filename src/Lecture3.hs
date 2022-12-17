@@ -1,4 +1,5 @@
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE BangPatterns #-}
 
 {- |
 Module                  : Lecture3
@@ -52,7 +53,7 @@ data Weekday
     | Friday
     | Saturday
     | Sunday
-    deriving (Show, Eq)
+    deriving (Show, Eq, Bounded, Enum)
 
 {- | Write a function that will display only the first three letters
 of a weekday.
@@ -60,7 +61,8 @@ of a weekday.
 >>> toShortString Monday
 "Mon"
 -}
-toShortString = error "TODO"
+toShortString :: Weekday -> String
+toShortString = take 3 . show
 
 {- | Write a function that returns next day of the week, following the
 given day.
@@ -82,7 +84,11 @@ Tuesday
   would work for **any** enumeration type in Haskell (e.g. 'Bool',
   'Ordering') and not just 'Weekday'?
 -}
-next = error "TODO"
+next :: (Eq a, Bounded a, Enum a) => a -> a
+next x =
+  if x == maxBound
+    then minBound
+    else succ x
 
 {- | Implement a function that calculates number of days from the first
 weekday to the second.
@@ -92,8 +98,13 @@ weekday to the second.
 >>> daysTo Friday Wednesday
 5
 -}
-daysTo = error "TODO"
-
+daysTo :: (Eq a, Bounded a, Enum a) => a -> a -> Int
+daysTo = go 0
+  where
+    go !count !first second
+      | first == second = count
+      | otherwise = go (count + 1) (next first) second
+      
 {-
 
 In the following block of tasks you need to implement 'Semigroup'
