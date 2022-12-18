@@ -92,6 +92,7 @@ module Lecture4
     , Stats (..)
 
       -- * Internal functions
+    , split
     , parseRow
     , rowToStats
     , combineRows
@@ -103,6 +104,8 @@ module Lecture4
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
 import Text.Read (readMaybe)
+import Data.Function ((&))
+import Data.Char (isSpace)
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
@@ -134,8 +137,34 @@ errors. We will simply return an optional result here.
 🕯 HINT: Use the 'readMaybe' function from the 'Text.Read' module.
 -}
 
+split :: Eq a => a -> [a] -> [[a]]
+split _ [] = []
+split separ list = part : split separ remainder
+  where
+    (part, remainder) =
+      list
+        & dropWhile (== separ)
+        & break (== separ)
+
+parseProductName :: String -> Maybe String
+parseProductName name =
+  if all isSpace name
+    then Nothing
+    else Just name
+
+parseCost :: String -> Maybe Int
+parseCost cs = do
+  c <- readMaybe cs :: Maybe Int
+  if c >= 0 then return c else Nothing
+
 parseRow :: String -> Maybe Row
-parseRow = error "TODO"
+parseRow rs = case split ',' rs of
+  [ps, ts, cs] -> do
+    p <- parseProductName ps
+    t <- readMaybe ts :: Maybe TradeType
+    c <- parseCost cs
+    return Row {rowProduct = p, rowTradeType = t, rowCost = c}
+  _ -> Nothing
 
 {-
 We have almost all we need to calculate final stats in a simple and
