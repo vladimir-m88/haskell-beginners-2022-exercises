@@ -94,6 +94,7 @@ module Lecture4
     , Stats (..)
 
       -- * Internal functions
+    , helloWsl
     , split
     , parseRow
     , rowToStats
@@ -120,6 +121,9 @@ problems in a strongly-typed, functional, algebraic way.
 
 First, let's define data types to represent a single row of our file.
 -}
+
+helloWsl :: String
+helloWsl = "Hello WSL!"
 
 data TradeType
     = Buy

@@ -10,7 +10,7 @@ import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 
 import Lecture4 (MaxLen (..), Row (..), Stats (..), TradeType (..), calculateStats, displayStats,
                  parseRow, printProductStats, rowToStats,
-                 split)
+                 split, helloWsl)
 
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -18,6 +18,9 @@ import qualified Hedgehog.Range as Range
 
 lecture4Spec :: Spec
 lecture4Spec = describe "Lecture 4" $ do
+    describe "helloWsl" $
+      it "OK" $ helloWsl `shouldBe` "Hello WSL!"
+
     describe "split" $ do
         it "Empty" $ split ',' "" `shouldBe` []
         it "Single value" $ split ',' "Buy" `shouldBe` ["Buy"]
