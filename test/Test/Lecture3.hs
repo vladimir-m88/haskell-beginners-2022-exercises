@@ -9,7 +9,7 @@ import Hedgehog.Classes (foldableLaws, functorLaws, lawsCheck, monoidLaws, semig
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn)
 
 import Lecture3 (Gold (..), List1 (..), Reward (..), Treasure (..), Weekday (..), appendDiff3,
-                 daysTo, next, toShortString)
+                 daysTo, next, toShortString, apply)
 
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -77,10 +77,6 @@ lecture3Spec = describe "Lecture 3" $ do
         it "Checks duplicates only for original values" $
             appendDiff3 [1] [2] [1, 2] `shouldBe` [1, 2, 1, 2]
 
-{-
-
-!!! UNCOMMENT THE FOLLOWING SECTION FOR FOLDABLE/FUNCTOR TESTS !!!
-
     describe "Laws: Foldable" $ do
         it "List1" $ do
             lawsCheck (foldableLaws genList1With) `shouldReturn` True
@@ -92,7 +88,12 @@ lecture3Spec = describe "Lecture 3" $ do
             lawsCheck (functorLaws genList1With) `shouldReturn` True
         it "Treasure" $ do
             lawsCheck (functorLaws genTreasureWith) `shouldReturn` True
--}
+
+    describe "apply" $ do
+        it "Just" $ apply 5 (Just (+ 3)) `shouldBe` Just 8
+        it "Nothing" $ apply 5 Nothing `shouldBe` (Nothing :: Maybe Int)
+        it "drop" $ apply [1 .. 10] (Just (drop 7)) `shouldBe` Just [8,9,10]
+        it "List of func" $ apply 5 [(+ 3), (* 4), div 17] `shouldBe` [8,20,3]
 
 genSmallInt :: Gen Int
 genSmallInt = Gen.int (Range.linear 0 10)
