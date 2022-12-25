@@ -1,5 +1,6 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {- |
 Module                  : Lecture3
@@ -37,6 +38,8 @@ module Lecture3
 
 -- VVV If you need to import libraries, do it after this line ... VVV
 import Data.List (nub)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Semigroup (sconcat)
 -- ^^^ and before this line. Otherwise the test suite might fail  ^^^
 
 -- $setup
@@ -53,7 +56,7 @@ data Weekday
     | Friday
     | Saturday
     | Sunday
-    deriving (Show, Eq, Bounded, Enum)
+    deriving (Show, Eq, Ord, Bounded, Enum)
 
 {- | Write a function that will display only the first three letters
 of a weekday.
@@ -98,12 +101,11 @@ weekday to the second.
 >>> daysTo Friday Wednesday
 5
 -}
-daysTo :: (Eq a, Bounded a, Enum a) => a -> a -> Int
-daysTo = go 0
-  where
-    go !count !first second
-      | first == second = count
-      | otherwise = go (count + 1) (next first) second
+daysTo :: forall a. (Ord a, Bounded a, Enum a) => a -> a -> Int
+daysTo f s =
+  if s >= f
+    then fromEnum s - fromEnum f
+    else (fromEnum (maxBound :: a) - fromEnum f + 1) + (fromEnum s - fromEnum (minBound :: a))
       
 {-
 
@@ -183,9 +185,8 @@ monsters, you should get a combined treasure and not just the first
 -}
 instance Semigroup a => Semigroup (Treasure a) where
   (<>) :: Treasure a -> Treasure a -> Treasure a
-  NoTreasure <> NoTreasure = NoTreasure
-  SomeTreasure x <> NoTreasure = SomeTreasure x
-  NoTreasure <> SomeTreasure y = SomeTreasure y
+  NoTreasure <> t = t
+  t <> NoTreasure = t
   SomeTreasure x <> SomeTreasure y = SomeTreasure (x <> y)
 
 instance Semigroup a => Monoid (Treasure a) where
@@ -209,8 +210,10 @@ together only different elements.
 Product {getProduct = 6}
 
 -}
-appendDiff3 :: (Monoid a, Eq a) => a -> a -> a -> a
-appendDiff3 x y z = mconcat $ nub [x, y, z]
+appendDiff3 :: (Semigroup a, Eq a) => a -> a -> a -> a
+appendDiff3 x y z = sconcat (head l :| tail l)
+  where
+    l = nub [x, y, z]
 
 {-
 
