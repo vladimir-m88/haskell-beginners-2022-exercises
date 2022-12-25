@@ -1,4 +1,5 @@
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE StrictData #-}
 
 {- |
 Module                  : Lecture4
@@ -104,13 +105,14 @@ module Lecture4
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
+import Data.Semigroup (Max (..), Min (..), Sum (..))
 import Text.Read (readMaybe)
 import Data.Function ((&))
 import Data.Char (isSpace)
 import Data.Foldable (Foldable(foldl'))
 import Data.Maybe (mapMaybe)
 import System.Environment (getArgs)
+import System.Directory (doesFileExist)
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
@@ -228,12 +230,24 @@ instance Semigroup Stats where
         statsTotalSum = statsTotalSum s1 <> statsTotalSum s2,
         statsAbsoluteMax = statsAbsoluteMax s1 <> statsAbsoluteMax s2,
         statsAbsoluteMin = statsAbsoluteMin s1 <> statsAbsoluteMin s2,
-        statsSellMax = statsSellMax s1 <> statsSellMax s2,
-        statsSellMin = statsSellMin s1 <> statsSellMin s2,
-        statsBuyMax = statsBuyMax s1 <> statsBuyMax s2,
-        statsBuyMin = statsBuyMin s1 <> statsBuyMin s2,
+        statsSellMax = appendMaybeMax (statsSellMax s1) (statsSellMax s2),
+        statsSellMin = appendMaybeMin (statsSellMin s1) (statsSellMin s2),
+        statsBuyMax = appendMaybeMax (statsBuyMax s1) (statsBuyMax s2),
+        statsBuyMin = appendMaybeMin (statsBuyMin s1) (statsBuyMin s2),
         statsLongest = statsLongest s1 <> statsLongest s2
       }
+
+appendMaybeMax :: Maybe (Max Int) -> Maybe (Max Int) -> Maybe (Max Int)
+appendMaybeMax Nothing x = x
+appendMaybeMax x Nothing = x
+appendMaybeMax jmx@(Just (Max x)) jmy@(Just (Max y)) =
+  if x >= y then jmx else jmy
+
+appendMaybeMin :: Maybe (Min Int) -> Maybe (Min Int) -> Maybe (Min Int)
+appendMaybeMin Nothing x = x
+appendMaybeMin x Nothing = x
+appendMaybeMin jmx@(Just (Min x)) jmy@(Just (Min y)) =
+  if x <= y then jmx else jmy
 
 {-
 The reason for having the 'Stats' data type is to be able to convert
@@ -250,35 +264,36 @@ row in the file.
 
 rowToStats :: Row -> Stats
 rowToStats
-  row@Row
+  Row
     { rowProduct = prod,
-      rowCost = cost
+      rowCost = cost,
+      rowTradeType = tType
     } =
     Stats
       { statsTotalPositions = 1,
-        statsTotalSum = Sum $ costForTotal row,
+        statsTotalSum = Sum costForTotal,
         statsAbsoluteMax = Max cost,
         statsAbsoluteMin = Min cost,
-        statsSellMax = sellCost row & fmap Max,
-        statsSellMin = sellCost row & fmap Min,
-        statsBuyMax = buyCost row & fmap Max,
-        statsBuyMin = buyCost row & fmap Min,
+        statsSellMax = fmap Max sellCost,
+        statsSellMin = fmap Min sellCost,
+        statsBuyMax = fmap Max buyCost,
+        statsBuyMin = fmap Min buyCost,
         statsLongest = MaxLen {unMaxLen = prod}
       }
     where
-      costForTotal :: Row -> Int
-      costForTotal r = case rowTradeType r of
-        Sell -> rowCost r
-        Buy -> - (rowCost r)
+      costForTotal :: Int
+      costForTotal = case tType of
+        Sell -> cost
+        Buy -> - cost
 
-      sellCost :: Row -> Maybe Int
-      sellCost r = case rowTradeType r of
-        Sell -> Just $ rowCost r
+      sellCost :: Maybe Int
+      sellCost = case tType of
+        Sell -> Just cost
         _ -> Nothing
 
-      buyCost :: Row -> Maybe Int
-      buyCost r = case rowTradeType r of
-        Buy -> Just $ rowCost r
+      buyCost :: Maybe Int
+      buyCost = case tType of
+        Buy -> Just cost
         _ -> Nothing
 
 {-
@@ -305,7 +320,7 @@ implement the next task.
 -}
 
 combineRows :: NonEmpty Row -> Stats
-combineRows = sconcat . fmap rowToStats
+combineRows (r :| rs) = foldl' (<>) (rowToStats r) (map rowToStats rs)
 
 {-
 After we've calculated stats for all rows, we can then pretty-print
@@ -386,9 +401,13 @@ Use functions 'readFile' and 'putStrLn' here.
 
 printProductStats :: FilePath -> IO ()
 printProductStats filePath = do
-  fileContent <- readFile filePath
-  let stats = calculateStats fileContent
-  putStrLn stats
+  fileExists <- doesFileExist filePath
+  if fileExists
+    then do
+      fileContent <- readFile filePath
+      let stats = calculateStats fileContent
+      putStrLn stats
+    else putStrLn "File does not exist"
 
 {-
 Okay, I lied. This is not the last thing. Now, we need to wrap
