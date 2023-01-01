@@ -165,13 +165,12 @@ parseCost cs = do
   if c >= 0 then return c else Nothing
 
 parseRow :: String -> Maybe Row
-parseRow rs = case split ',' rs of
-  [ps, ts, cs] -> do
+parseRow rs = do
+    [ps, ts, cs] <- Just $ split ',' rs
     p <- parseProductName ps
     t <- readMaybe ts :: Maybe TradeType
     c <- parseCost cs
     return Row {rowProduct = p, rowTradeType = t, rowCost = c}
-  _ -> Nothing
 
 {-
 We have almost all we need to calculate final stats in a simple and
