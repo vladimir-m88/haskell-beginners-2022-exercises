@@ -1,5 +1,6 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE BangPatterns #-}
 
 {- |
 Module                  : Lecture4
@@ -229,24 +230,17 @@ instance Semigroup Stats where
         statsTotalSum = statsTotalSum s1 <> statsTotalSum s2,
         statsAbsoluteMax = statsAbsoluteMax s1 <> statsAbsoluteMax s2,
         statsAbsoluteMin = statsAbsoluteMin s1 <> statsAbsoluteMin s2,
-        statsSellMax = appendMaybeMax (statsSellMax s1) (statsSellMax s2),
-        statsSellMin = appendMaybeMin (statsSellMin s1) (statsSellMin s2),
-        statsBuyMax = appendMaybeMax (statsBuyMax s1) (statsBuyMax s2),
-        statsBuyMin = appendMaybeMin (statsBuyMin s1) (statsBuyMin s2),
+        statsSellMax = appendMaybeStrict (statsSellMax s1) (statsSellMax s2),
+        statsSellMin = appendMaybeStrict (statsSellMin s1) (statsSellMin s2),
+        statsBuyMax = appendMaybeStrict (statsBuyMax s1) (statsBuyMax s2),
+        statsBuyMin = appendMaybeStrict (statsBuyMin s1) (statsBuyMin s2),
         statsLongest = statsLongest s1 <> statsLongest s2
       }
 
-appendMaybeMax :: Maybe (Max Int) -> Maybe (Max Int) -> Maybe (Max Int)
-appendMaybeMax Nothing x = x
-appendMaybeMax x Nothing = x
-appendMaybeMax jmx@(Just (Max x)) jmy@(Just (Max y)) =
-  if x >= y then jmx else jmy
-
-appendMaybeMin :: Maybe (Min Int) -> Maybe (Min Int) -> Maybe (Min Int)
-appendMaybeMin Nothing x = x
-appendMaybeMin x Nothing = x
-appendMaybeMin jmx@(Just (Min x)) jmy@(Just (Min y)) =
-  if x <= y then jmx else jmy
+appendMaybeStrict :: Semigroup a => Maybe a -> Maybe a -> Maybe a
+appendMaybeStrict a b = case a <> b of
+  Nothing -> Nothing
+  Just !x -> Just x
 
 {-
 The reason for having the 'Stats' data type is to be able to convert
